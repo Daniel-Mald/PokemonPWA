@@ -95,6 +95,8 @@ async function NetworkFirst(url) {
          
     }
     let channel = new BroadcastChannel("refreshChannel");
+
+    //suscribirse al channel en el layaut
     async function staleThenRevalidate(req) {
         let cache = await caches.open(cacheName);
         let response = await cache.match(req);
@@ -110,7 +112,7 @@ async function NetworkFirst(url) {
                 if (cacheData != networkData) {
                     cache.put(req, networkResponsse.clone());
                     channel.postMessage({
-                        Url: req.url, networkData,
+                        Url: req.url,
                         Data: networkData
                     });
                 }
@@ -120,6 +122,32 @@ async function NetworkFirst(url) {
 
         } else {
             return NetworkFirst(req);
+        }
+    }
+
+    let maxAge = 24 * 60 * 60 * 1000;
+    async function timeBasedCache(req) {
+        let cache = await caches.open(cacheName);
+
+        let cacheResponse = await cache.match(req);
+
+        if (cacheResponse) {
+            let fechaDescarga = cacheResponse.headers.get("fecha");
+
+
+
+        } else {
+            let networkResponse = await fetch(req);
+            let nuevoResponse = new Response(networkResponse.body, {
+                statusText : networkResponse.statusText,
+                status: networkResponse.status,
+                headers: networkResponse.headers,
+                type: networkResponse.type
+            });
+            nuevoResponse.headers.append("fecha", new Date().toISOString());
+
+            cache.put(req, nuevoResponse);
+            return networkResponse;
         }
     }
 }
